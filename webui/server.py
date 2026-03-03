@@ -641,7 +641,7 @@ class TrainRequest(BaseModel):
     shutdown_instance: bool = True
     auto_confirm: bool = True
     training_mode: Literal["t2v", "i2v"] = "t2v"
-    noise_mode: Literal["both", "high", "low"] = "both"
+    noise_mode: Literal["both", "high", "low", "combined"] = "both"
     convert_videos_to_16fps: bool = False
     cloud_connection_id: Optional[str] = None
 
@@ -1604,6 +1604,9 @@ async def start_training(payload: TrainRequest) -> Dict:
         active_runs: Set[str] = {"high"}
     elif noise_mode == "low":
         active_runs = {"low"}
+    elif noise_mode == "combined":
+        # Combined mode writes a single stream to run_high.log
+        active_runs = {"high"}
     else:
         active_runs = {"high", "low"}
 
@@ -1629,6 +1632,8 @@ async def start_training(payload: TrainRequest) -> Dict:
         disabled_messages.append("High noise training disabled by configuration.")
     if "low" not in active_runs:
         disabled_messages.append("Low noise training disabled by configuration.")
+    if noise_mode == "combined":
+        disabled_messages.append("Combined noise mode active: live metrics are shown in the High noise panel.")
     for message in disabled_messages:
         training_state.append_log(message)
         await event_manager.publish({"type": "log", "line": message})

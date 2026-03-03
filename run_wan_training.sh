@@ -4,7 +4,7 @@ set -euo pipefail
 # Simple WAN2.2 LoRA training runner
 # - Uses CLI inputs (with sensible defaults)
 # - Caches latents and text encoder outputs
-# - Trains HIGH noise and LOW noise models
+# - Trains HIGH noise, LOW noise, or COMBINED noise models
 # - If 2+ GPUs are free, runs them concurrently; otherwise waits for a free GPU
 
 MUSUBI_DIR="/workspace/musubi-tuner"
@@ -50,7 +50,8 @@ Optional arguments (defaults are used when omitted):
   --upload-cloud [Y|N]             Upload outputs to configured cloud storage
   --shutdown-instance [Y|N]        Shut down Vast.ai instance after training
   --mode [t2v|i2v]                 Select the training task (text-to-video or image-to-video)
-  --noise-mode [both|high|low]     Choose whether to train high noise, low noise, or both
+  --noise-mode [both|high|low|combined]
+                                    Choose whether to train high noise, low noise, both, or combined
   --cloud-connection-id VALUE      Upload to a specific Vast.ai cloud connection
   --auto-confirm                   No-op (retained for compatibility)
   --help                           Show this message and exit
@@ -565,10 +566,12 @@ main() {
   local TRAIN_TASK
   local HIGH_TITLE
   local LOW_TITLE
+  local COMBINED_TITLE
   local -a CACHE_LATENTS_ARGS=()
   local noise_mode="${NOISE_MODE_INPUT:-both}"
   local RUN_HIGH=1
   local RUN_LOW=1
+  local RUN_COMBINED=0
 
   echo "Noise selection: $noise_mode"
   noise_mode=${noise_mode,,}
@@ -577,17 +580,25 @@ main() {
     both)
       RUN_HIGH=1
       RUN_LOW=1
+      RUN_COMBINED=0
       ;;
     high)
       RUN_HIGH=1
       RUN_LOW=0
+      RUN_COMBINED=0
       ;;
     low)
       RUN_HIGH=0
       RUN_LOW=1
+      RUN_COMBINED=0
+      ;;
+    combined)
+      RUN_HIGH=0
+      RUN_LOW=0
+      RUN_COMBINED=1
       ;;
     *)
-      echo "Invalid noise selection: $noise_mode. Use 'high', 'low', or 'both'." >&2
+      echo "Invalid noise selection: $noise_mode. Use 'high', 'low', 'both', or 'combined'." >&2
       exit 1
       ;;
   esac
@@ -601,6 +612,7 @@ main() {
       LOW_DIT="$T2V_LOW_DIT"
       HIGH_TITLE="${TITLE_PREFIX}_Wan2.2_high"
       LOW_TITLE="${TITLE_PREFIX}_Wan2.2_low"
+      COMBINED_TITLE="${TITLE_PREFIX}_Wan2.2_combined"
       TIMESTEP_BOUNDARY=875
       ;;
     i2v)
@@ -609,6 +621,7 @@ main() {
       LOW_DIT="$I2V_LOW_DIT"
       HIGH_TITLE="${TITLE_PREFIX}_Wan2.2_high"
       LOW_TITLE="${TITLE_PREFIX}_Wan2.2_low"
+      COMBINED_TITLE="${TITLE_PREFIX}_Wan2.2_combined"
       CACHE_LATENTS_ARGS+=(--i2v)
       TIMESTEP_BOUNDARY=900
       ;;
@@ -657,6 +670,11 @@ main() {
   else
     echo "  Low noise:  disabled"
   fi
+  if (( RUN_COMBINED )); then
+    echo "  Combined title: $COMBINED_TITLE"
+  else
+    echo "  Combined noise: disabled"
+  fi
   echo "  Author:     $AUTHOR"
   echo "  Max epochs: $MAX_EPOCHS"
   echo "  Save every: $SAVE_EVERY epochs"
@@ -677,6 +695,10 @@ main() {
   require "$ACCELERATE"
   require "$VAE"
   require "$T5"
+  if (( RUN_COMBINED )); then
+    require "$HIGH_DIT"
+    require "$LOW_DIT"
+  fi
   if (( RUN_HIGH )); then
     require "$HIGH_DIT"
   fi
@@ -691,6 +713,8 @@ main() {
 
   ATTN_FLAGS=$(determine_attention_flags)
   echo "Using attention flags: $ATTN_FLAGS"
+  local LOGDIR="$MUSUBI_DIR/logs"
+  mkdir -p "$LOGDIR"
 
   echo "Using CPU parameters:"
   echo "  --num_cpu_threads_per_process: $CPU_THREADS_PER_PROCESS"
@@ -716,12 +740,18 @@ main() {
   # Allocate distinct rendezvous ports to prevent EADDRINUSE
   local HIGH_PORT=""
   local LOW_PORT=""
+  local COMBINED_PORT=""
   local HIGH_GPU=""
   local LOW_GPU=""
+  local COMBINED_GPU=""
   local HIGH_PID=""
   local LOW_PID=""
+  local COMBINED_PID=""
   local -a WAIT_PIDS=()
 
+  if (( RUN_COMBINED )); then
+    COMBINED_PORT=$(get_free_port)
+  fi
   if (( RUN_HIGH )); then
     HIGH_PORT=$(get_free_port)
   fi
@@ -730,6 +760,54 @@ main() {
     if (( RUN_HIGH )) && [[ "$LOW_PORT" == "$HIGH_PORT" ]]; then
       LOW_PORT=$(get_free_port)
     fi
+  fi
+
+  if (( RUN_COMBINED )); then
+    echo "Waiting for a free GPU for COMBINED noise training..."
+    COMBINED_GPU=$(wait_for_free_gpu)
+    echo "Starting COMBINED on GPU $COMBINED_GPU (port $COMBINED_PORT) -> run_high.log"
+    MASTER_ADDR=127.0.0.1 MASTER_PORT="$COMBINED_PORT" CUDA_VISIBLE_DEVICES="$COMBINED_GPU" \
+    "$ACCELERATE" launch --num_cpu_threads_per_process "$CPU_THREADS_PER_PROCESS" --num_processes 1 --main_process_port "$COMBINED_PORT" src/musubi_tuner/wan_train_network.py \
+      --dataset_config "$DATASET" \
+      --discrete_flow_shift 3 \
+      --dit "$LOW_DIT" \
+      --dit_high_noise "$HIGH_DIT" \
+      --fp8_base \
+      --gradient_accumulation_steps 1 \
+      --gradient_checkpointing \
+      --img_in_txt_in_offloading \
+      --learning_rate 0.0001 \
+      --lr_scheduler cosine \
+      --lr_warmup_steps 100 \
+      --max_data_loader_n_workers "$MAX_DATA_LOADER_WORKERS" \
+      --max_timestep 1000 \
+      --max_train_epochs "$MAX_EPOCHS" \
+      --min_timestep 0 \
+      --mixed_precision fp16 \
+      --network_alpha 16 \
+      --network_args "verbose=True" "exclude_patterns=[]" \
+      --network_dim 16 \
+      --network_module networks.lora_wan \
+      --offload_inactive_dit \
+      --optimizer_type adamw \
+      --output_dir "$MUSUBI_DIR/output" \
+      --output_name "$COMBINED_TITLE" \
+      --metadata_title "$COMBINED_TITLE" \
+      --metadata_author "$AUTHOR" \
+      --persistent_data_loader_workers \
+      --save_every_n_epochs "$SAVE_EVERY" \
+      --seed 42 \
+      --t5 "$T5" \
+      --task "$TRAIN_TASK" \
+      --timestep_boundary "$TIMESTEP_BOUNDARY" \
+      --timestep_sampling logsnr \
+      --vae "$VAE" \
+      --vae_cache_cpu \
+      --vae_dtype float16 \
+      $ATTN_FLAGS \
+      > "$PWD/run_high.log" 2>&1 &
+    COMBINED_PID=$!
+    WAIT_PIDS+=("$COMBINED_PID")
   fi
 
   if (( RUN_HIGH )); then
@@ -836,9 +914,14 @@ main() {
   if (( RUN_LOW )); then
     echo "LOW  PID: $LOW_PID${LOW_GPU:+ (GPU $LOW_GPU)}, log: $PWD/run_low.log"
   fi
+  if (( RUN_COMBINED )); then
+    echo "COMBINED PID: $COMBINED_PID${COMBINED_GPU:+ (GPU $COMBINED_GPU)}, log: $PWD/run_high.log"
+  fi
 
   if (( RUN_HIGH )) && (( RUN_LOW )); then
     echo "Waiting for both trainings to finish..."
+  elif (( RUN_COMBINED )); then
+    echo "Waiting for combined noise training to finish..."
   elif (( RUN_HIGH )); then
     echo "Waiting for high noise training to finish..."
   elif (( RUN_LOW )); then
