@@ -773,6 +773,8 @@ main() {
       --dit "$LOW_DIT" \
       --dit_high_noise "$HIGH_DIT" \
       --fp8_base \
+      --fp8_scaled \
+      --fp8_t5 \
       --gradient_accumulation_steps 1 \
       --gradient_checkpointing \
       --img_in_txt_in_offloading \
@@ -804,7 +806,7 @@ main() {
       --vae "$VAE" \
       --vae_cache_cpu \
       --vae_dtype float16 \
-      $ATTN_FLAGS \
+      --sdpa \
       > "$PWD/run_high.log" 2>&1 &
     COMBINED_PID=$!
     WAIT_PIDS+=("$COMBINED_PID")
