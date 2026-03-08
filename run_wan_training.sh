@@ -564,6 +564,7 @@ main() {
   training_mode=${training_mode,,}
 
   local TRAIN_TASK
+  local TRAIN_MODE_LABEL
   local HIGH_TITLE
   local LOW_TITLE
   local COMBINED_TITLE
@@ -608,20 +609,22 @@ main() {
   case "$training_mode" in
     t2v)
       TRAIN_TASK="t2v-A14B"
+      TRAIN_MODE_LABEL="T2V"
       HIGH_DIT="$T2V_HIGH_DIT"
       LOW_DIT="$T2V_LOW_DIT"
-      HIGH_TITLE="${TITLE_PREFIX}_Wan2.2_high"
-      LOW_TITLE="${TITLE_PREFIX}_Wan2.2_low"
-      COMBINED_TITLE="${TITLE_PREFIX}_Wan2.2_combined"
+      HIGH_TITLE="WAN2.2-${TRAIN_MODE_LABEL}_HighNoise_${TITLE_PREFIX}"
+      LOW_TITLE="WAN2.2-${TRAIN_MODE_LABEL}_LowNoise_${TITLE_PREFIX}"
+      COMBINED_TITLE="WAN2.2-${TRAIN_MODE_LABEL}_Combined_${TITLE_PREFIX}"
       TIMESTEP_BOUNDARY=875
       ;;
     i2v)
       TRAIN_TASK="i2v-A14B"
+      TRAIN_MODE_LABEL="I2V"
       HIGH_DIT="$I2V_HIGH_DIT"
       LOW_DIT="$I2V_LOW_DIT"
-      HIGH_TITLE="${TITLE_PREFIX}_Wan2.2_high"
-      LOW_TITLE="${TITLE_PREFIX}_Wan2.2_low"
-      COMBINED_TITLE="${TITLE_PREFIX}_Wan2.2_combined"
+      HIGH_TITLE="WAN2.2-${TRAIN_MODE_LABEL}_HighNoise_${TITLE_PREFIX}"
+      LOW_TITLE="WAN2.2-${TRAIN_MODE_LABEL}_LowNoise_${TITLE_PREFIX}"
+      COMBINED_TITLE="WAN2.2-${TRAIN_MODE_LABEL}_Combined_${TITLE_PREFIX}"
       CACHE_LATENTS_ARGS+=(--i2v)
       TIMESTEP_BOUNDARY=900
       ;;
