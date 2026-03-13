@@ -3,14 +3,14 @@
 [general]
 caption_extension = ".txt"
 batch_size = 1
-enable_bucket = true # Downscales and upscales images, preserving aspect ratio.
-bucket_no_upscale = true 
-resolution = [640, 640] 
+enable_bucket = true # preserving aspect ratio.
+bucket_no_upscale = false
+num_repeats = 1
 
 [[datasets]]
+resolution = [480, 480] 
 image_directory = "/workspace/musubi-tuner/dataset" # If you change this, the upload feature in the webui won't work
 cache_directory = "/workspace/musubi-tuner/dataset/cache"
-num_repeats = 1
 
 [[datasets]]
 video_directory = "/workspace/musubi-tuner/dataset"

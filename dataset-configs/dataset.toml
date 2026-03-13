@@ -1,22 +1,23 @@
-# resolution, caption_extension, batch_size, num_repeats, enable_bucket, bucket_no_upscale should be set in either general or datasets
-# otherwise, the default values will be used for each item
-# general configurations
+# Global configurations
 [general]
-resolution = [960 , 960]
 caption_extension = ".txt"
 batch_size = 1
-enable_bucket = true
-bucket_no_upscale = false
-[[datasets]]
-image_directory = "/workspace/musubi-tuner/dataset"
-cache_directory = "/workspace/musubi-tuner/dataset/cache"
+enable_bucket = true # Preserve Aspect Ratio of Original Image
+bucket_no_upscale = false # Upscale videos and images if they are below the target resolution
 num_repeats = 1 # optional, default is 1. Number of times to repeat the dataset. Useful to balance the multiple datasets with different sizes.
+
 # other datasets can be added here. each dataset can have different configurations
 
+# Image Training Settings
 [[datasets]]
+resolution = [640 , 640] # Train Images at 0.41 MP resolution - solid comprimise between visual quality and performance
+image_directory = "/workspace/musubi-tuner/dataset"
+cache_directory = "/workspace/musubi-tuner/dataset/cache"
+
+# Video Training Settings
+[[datasets]]
+resolution = [298,298] # 0.088 MP. It is enough
 video_directory = "/workspace/musubi-tuner/dataset"
 cache_directory = "/workspace/musubi-tuner/dataset/videocache"
-frame_extraction = "full" #start from the beginning of the video
-max_frames = 81 #only take 5 seconds 
-resolution = [298,298] # 0.088 megapixels, slightly higher than most guides recommend
-#340x340 took too long, this takes half as long and gave spectacular result. If you still struggle to produce good outputs, make sure all your videos are 16fps, only use high quality source material, and make sure your captions are consistent. 
+frame_extraction = "full"
+max_frames = 81 # Start at beginning of video and take 5 seconds at 16 FPS
