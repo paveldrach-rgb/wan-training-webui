@@ -829,6 +829,7 @@ main() {
       $ATTN_FLAGS \
       --mixed_precision fp16 \
       --fp8_base \
+      --fp8_scaled \
       --optimizer_type adamw \
       --learning_rate 3e-4 \
       --gradient_checkpointing \
@@ -881,6 +882,7 @@ main() {
       $ATTN_FLAGS \
       --mixed_precision fp16 \
       --fp8_base \
+      --fp8_scaled \
       --optimizer_type adamw \
       --learning_rate 3e-4 \
       --gradient_checkpointing \
