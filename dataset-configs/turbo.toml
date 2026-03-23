@@ -4,7 +4,7 @@
 caption_extension = ".txt"
 batch_size = 1
 enable_bucket = true # preserving aspect ratio.
-bucket_no_upscale = false
+bucket_no_upscale = true # Do not Upscale videos and images if they are below the target resolution. This is found to introduce compression artifacts
 num_repeats = 1
 
 [[datasets]]

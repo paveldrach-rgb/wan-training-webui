@@ -3,7 +3,7 @@
 caption_extension = ".txt"
 batch_size = 1
 enable_bucket = true # Preserve Aspect Ratio of Original Image
-bucket_no_upscale = false # Upscale videos and images if they are below the target resolution
+bucket_no_upscale = true # Do not Upscale videos and images if they are below the target resolution. This is found to introduce compression artifacts
 num_repeats = 1 # optional, default is 1. Number of times to repeat the dataset. Useful to balance the multiple datasets with different sizes.
 
 # other datasets can be added here. each dataset can have different configurations
