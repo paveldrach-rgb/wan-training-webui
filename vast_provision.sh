@@ -109,18 +109,6 @@ start_download diffusion_low_noise \
     split_files/diffusion_models/wan2.2_t2v_low_noise_14B_fp16.safetensors \
     --local-dir models/diffusion_models
 
-start_download diffusion_high_noise_i2v \
-  hf download \
-    Comfy-Org/Wan_2.2_ComfyUI_Repackaged \
-    split_files/diffusion_models/wan2.2_i2v_high_noise_14B_fp16.safetensors \
-    --local-dir models/diffusion_models
-
-start_download diffusion_low_noise_i2v \
-  hf download \
-    Comfy-Org/Wan_2.2_ComfyUI_Repackaged \
-    split_files/diffusion_models/wan2.2_i2v_low_noise_14B_fp16.safetensors \
-    --local-dir models/diffusion_models
-
 echo "Model downloads running in background. PID files stored in ${DOWNLOAD_STATUS_DIR}."
 
 # ---------- wait for critical tasks ----------
