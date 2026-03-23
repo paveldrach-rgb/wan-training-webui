@@ -36,17 +36,9 @@ cache_directory = "/workspace/musubi-tuner/dataset/cache/img/960"
 
 # Video Training Settings
 
-# 128x128
-[[datasets]]
-resolution = [128,128] # 0.016 MP. Fastest/lowest detail video bucket
-video_directory = "/workspace/musubi-tuner/dataset"
-cache_directory = "/workspace/musubi-tuner/dataset/cache/video/128"
-frame_extraction = "full"
-max_frames = 81 # Start at beginning of video and take 5 seconds at 16 FPS
-
 # 256x256
 [[datasets]]
-resolution = [256,256] # 0.066 MP. Mid-quality video bucket
+resolution = [256,256] # 0.066 MP. Baseline video bucket for speed + stability
 video_directory = "/workspace/musubi-tuner/dataset"
 cache_directory = "/workspace/musubi-tuner/dataset/cache/video/256"
 frame_extraction = "full"
@@ -55,8 +47,16 @@ max_frames = 81 # Start at beginning of video and take 5 seconds at 16 FPS
 
 # 320x320
 [[datasets]]
-resolution = [320,320] # 0.102 MP. Highest-quality video bucket in this preset
+resolution = [320,320] # 0.102 MP. Mid/high-quality video bucket
 video_directory = "/workspace/musubi-tuner/dataset"
 cache_directory = "/workspace/musubi-tuner/dataset/cache/video/320"
+frame_extraction = "full"
+max_frames = 81 # Start at beginning of video and take 5 seconds at 16 FPS
+
+# 368x368
+[[datasets]]
+resolution = [368,368] # 0.135 MP. Highest-quality (slowest) video bucket
+video_directory = "/workspace/musubi-tuner/dataset"
+cache_directory = "/workspace/musubi-tuner/dataset/cache/video/368"
 frame_extraction = "full"
 max_frames = 81 # Start at beginning of video and take 5 seconds at 16 FPS
